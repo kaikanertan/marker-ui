@@ -109,7 +109,15 @@ def parse_document(input_file_path):
         raise gr.Error(f"Failed to parse: {e}")
 
 os.environ["GRADIO_TEMP_DIR"] = GRADIO_TEMP_DIR
-marker_ui = gr.Blocks(theme=gr.themes.Monochrome(radius_size=gr.themes.sizes.radius_none))
+# 主字体用系统字体栈。Monochrome 默认的 GoogleFont("Lora") 会被 gradio 作为
+# render-blocking 样式表注入页面(fonts.googleapis.com),离线/内网环境会
+# 阻塞到请求超时,页面才渲染。
+marker_ui = gr.Blocks(
+    theme=gr.themes.Monochrome(
+        radius_size=gr.themes.sizes.radius_none,
+        font=("ui-sans-serif", "system-ui", "sans-serif"),
+    )
+)
 
 with marker_ui:
     gr.set_static_paths(paths=["assets", GRADIO_TEMP_DIR])
