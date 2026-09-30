@@ -78,10 +78,21 @@ def parse_document(input_file_path):
         with open(input_file_path, "rb") as f:
             files = {"pdf_file": (input_file_path, f, mime_type)}
             response = requests.post(
-                post_url, files=files, headers={"accept": "application/json"}
+                post_url, files=files, headers={"accept": "application/json"},
+                timeout=600,
             )
 
-        document_response = response.json()["result"]
+        # 先看 HTTP 状态码,再解析 JSON,避免把 500 纯文本响应丢给 json() 解析
+        try:
+            document_response = response.json()
+        except requests.exceptions.JSONDecodeError:
+            response.raise_for_status()  # 非 JSON 响应: 抛出带状态码的原始错误
+            raise RuntimeError(f"Unexpected non-JSON response: {response.text[:200]}")
+        if not response.ok:
+            # marker-api 出错时返回 {"status": "Error", "error": "..."}
+            raise RuntimeError(document_response.get("error", response.text[:200]))
+
+        document_response = document_response["result"]
         images = document_response.get("images", [])
         input_file_path = Path(input_file_path)
         zip_dir = input_file_path.parent/input_file_path.stem
